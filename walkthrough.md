@@ -1,0 +1,130 @@
+# Walkthrough: Backend Intelligence Layer (Sprint 3 Part 2)
+
+This document provides a comprehensive summary of the Backend Intelligence Layer implemented for MailPulse.
+
+---
+
+## 1. Project Folder Structure & Files Created
+
+The backend has been modularized with the following directories and files:
+
+```text
+WhatsMail-Notify/
+├── backend/
+│   ├── constants/
+│   │   ├── categories.js                     # 16 Supported Categories Enums
+│   │   ├── priorityRules.js                  # Scoring Weights & Levels
+│   │   └── defaultNotificationPreferences.js  # New User Default Mappings
+│   ├── utils/
+│   │   ├── keywordMatcher.js                 # Case-Insensitive Pattern Matcher
+│   │   └── senderClassifier.js               # Sender Classification (Domains/Emails)
+│   ├── services/
+│   │   ├── preferenceService.js              # Lazy-Initialization & Settings Manager
+│   │   ├── categoryService.js                # Rule-Based Email Categorizer
+│   │   ├── priorityService.js                # Score Evaluator (0 - 100)
+│   │   ├── notificationDecisionService.js    # Decider (Overrides & Summaries)
+│   │   ├── rulesEngine.js                    # Orchestration Flow
+│   │   └── emailProcessorService.js          # Fetcher and Analyzer
+│   ├── controllers/
+│   │   ├── preferenceController.js           # Settings HTTP Controller
+│   │   └── processorController.js            # Sync & Automated Test Runner
+│   └── routes/
+│       ├── preferenceRoutes.js               # Settings API Routing
+│       └── processorRoutes.js                # Analysis API Routing
+```
+
+---
+
+## 2. Database schema & migrations
+
+### Added Prisma Models
+The Prisma database schema at `backend/prisma/schema.prisma` was extended with:
+- `NotificationPreference`: Maps user settings for each category (enable toggles, minimum required priority thresholds).
+- `CustomKeyword`: User custom search term overrides.
+- `TrustedSender`: User whitelist filters (emails/domains).
+- `BlockedSender`: User blacklist filters (emails/domains).
+
+### Executed Database Migration
+Database tables have been created on the Neon PostgreSQL instance, and the Prisma client generated:
+```bash
+npx prisma migrate dev --name add_intelligence_schema
+npx prisma generate
+```
+
+---
+
+## 3. Mounted API Endpoints
+
+All routes are mounted under the `/api` namespace in `backend/routes/index.js` and protected via `authMiddleware` JWT cookie verification.
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| **GET** | `/api/preferences` | Fetches current settings and list parameters |
+| **PUT** | `/api/preferences` | Updates category configurations |
+| **GET** | `/api/preferences/default` | Returns defaults template layout |
+| **POST** | `/api/preferences/keywords` | Adds custom keyword |
+| **DELETE** | `/api/preferences/keywords/:id` | Deletes custom keyword |
+| **POST** | `/api/preferences/trusted` | Adds trusted email/domain |
+| **DELETE** | `/api/preferences/trusted/:id` | Deletes trusted sender |
+| **POST** | `/api/preferences/blocked` | Adds blocked email/domain |
+| **DELETE** | `/api/preferences/blocked/:id` | Deletes blocked sender |
+| **GET** | `/api/processor/analyze/:messageId` | Processes and analyzes a real Gmail email |
+| **POST** | `/api/processor/analyze` | Executes dry-run mock rules evaluation |
+| **GET** | `/api/processor/test` | Runs the automated rules validation test suite |
+
+---
+
+## 4. Sample Processed Email Output
+
+### Input payload
+```json
+{
+  "sender": "HDFC Bank Alert <alerts@hdfcbank.com>",
+  "subject": "Transaction Alert: ₹12,500 credited",
+  "body": "Your savings account has been credited with INR 12,500.00.",
+  "snippet": "credited ₹12,500",
+  "labels": ["INBOX"],
+  "unread": true
+}
+```
+
+### Analysis Decision
+```json
+{
+  "shouldNotify": true,
+  "reason": "Matches default preferences for category \"BANKING\"",
+  "category": "BANKING",
+  "priority": "HIGH",
+  "score": 70,
+  "summary": "HDFC Bank Alert: ₹12,500 credited."
+}
+```
+
+---
+
+## 5. Verification & Testing
+
+### Test Suite Execution
+An automated test runner is exposed at the `/api/processor/test` route. When triggered (within a logged-in browser session), it dynamically evaluates 9 different mock email structures and database whitelists/blacklists:
+
+1. **Bank Alert**: Verified as `BANKING` / `HIGH`.
+2. **OTP Code**: Verified as `OTP` / `HIGH`.
+3. **Google Security Alert**: Verified as `SECURITY` / `HIGH`.
+4. **GitHub Pull Request**: Verified as `WORK` / `MEDIUM`.
+5. **Amazon Order Confirmation**: Verified as `SHOPPING` / `MEDIUM`.
+6. **Newsletter Coupon**: Verified as `PROMOTIONS` / `LOW`.
+7. **Blocked Sender List Override**: Verified `shouldNotify = false`.
+8. **Trusted Sender List Override**: Verified `shouldNotify = true`.
+9. **Unknown Sender**: Verified as `UNKNOWN` / `shouldNotify = false` (disabled by default preference).
+
+---
+
+## 6. Sprint 3 Part 3 Preparation
+The backend APIs and database relations are complete, fully validating the logic layer. The codebase is prepared to begin Sprint 3 Part 3 to build the frontend notification settings administration panel.
+
+---
+
+## 7. Compound Unique Constraints & Security Alignment Patches
+* **Prisma Null Constraint Fix**: Redesigned `addTrustedSender` and `addBlockedSender` inside [preferenceService.js](file:///d:/programs/WhatsMail-Notify/backend/services/preferenceService.js) to query records via `findFirst` and execute updates/creations using singular row IDs. This decouples optional properties from composite index mappings and resolves `Argument email must not be null` crashes.
+* **Security Brand Domain Classification**: Added direct matching mappings for Google Accounts security services inside [senderClassifier.js](file:///d:/programs/WhatsMail-Notify/backend/utils/senderClassifier.js) and applied category-level scoring boosts (+25) for the `SECURITY` tag inside [priorityRules.js](file:///d:/programs/WhatsMail-Notify/backend/constants/priorityRules.js) and [priorityService.js](file:///d:/programs/WhatsMail-Notify/backend/services/priorityService.js), ensuring security notification alerts rank as `HIGH` priority.
+* **Uncategorized Sender Fallbacks**: Refined `classifyEmailCategory` inside [categoryService.js](file:///d:/programs/WhatsMail-Notify/backend/services/categoryService.js) by decoupling general `"INBOX"` labels from standard `"CATEGORY_PERSONAL"` routing, enabling unknown marketing/class alerts to fall back correctly to the `UNKNOWN` category.
