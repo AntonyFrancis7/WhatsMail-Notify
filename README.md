@@ -206,6 +206,63 @@ Open a browser pointing to `http://localhost:3000` to interact with the frontend
 
 ---
 
+## Sprint 3.1: Gmail API Integration
+
+### Overview
+Sprint 3.1 implements Gmail connection profiles, list syncing with search parameterization, full email MIME structure formatters, and attachments extraction with download bridges. 
+
+### Folder Structure Changes
+```text
+WhatsMail-Notify/
+├── backend/
+│   ├── controllers/
+│   │   └── gmailController.js
+│   ├── routes/
+│   │   └── gmailRoutes.js
+│   ├── services/
+│   │   └── gmailService.js
+│   └── utils/
+│       └── gmailFormatter.js
+└── frontend/
+    └── src/
+        ├── components/
+        │   └── EmailCard.jsx
+        ├── pages/
+        │   ├── Inbox.jsx
+        │   └── EmailDetail.jsx
+        └── services/
+            └── gmailService.js
+```
+
+### API Endpoints
+
+All endpoints below require a valid session JWT cookie.
+
+| Method | Endpoint | Description | Query Parameters |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/api/gmail/profile` | Fetches the connected Gmail account profile data | None |
+| **GET** | `/api/gmail/messages` | Lists the latest 25 emails with pagination and search | `q` (search query), `pageToken` (token string) |
+| **GET** | `/api/gmail/message/:id` | Returns the full email content (decodes base64url content) | None |
+| **GET** | `/api/gmail/messages/:messageId/attachments/:attachmentId` | Downloads attachment binary payload | `filename`, `mimeType` (metadata) |
+
+### Hardening & Security Features
+- **XSS Sanitization & Sandbox Isolation**: Email HTML body payloads render inside an `<iframe>` with `sandbox="allow-popups allow-popups-to-escape-sandbox"` and `srcDoc` inputs. Inline script execution is blocked browser-side.
+- **Concurrent Token Refreshes**: A promise cache map guarantees that simultaneous incoming API requests triggering 401 token refreshes resolve sequentially rather than spawning duplicate calls to Google servers.
+- **RFC base64url Decoding**: Handles email mime payload blocks securely by resolving special character buffers with native Node `base64url` formats.
+
+### Testing Instructions
+1. Run backend development: `cd backend && npm run dev`.
+2. Run frontend development: `cd frontend && npm run dev`.
+3. Open browser on `http://localhost:3000`. Authenticate using Google OAuth 2.0.
+4. Access the **Inbox** link inside the Navbar navigation.
+5. Verify list rendering, pagination, unread indicator circles, profile stats, and attachment download links.
+
+### Known Limitations
+- The system currently polls messages client-side; Webhooks/Google Cloud Pub/Sub subscriptions are not enabled (Sprint 3.2 scopes).
+- Whitelist rules are not yet configured in the database, showing in settings as state placeholders.
+
+---
+
 ## Deployment Instructions
 
 ### Backend (Railway)
