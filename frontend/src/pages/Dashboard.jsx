@@ -1,32 +1,71 @@
+import { useEffect, useState } from "react";
+import authService from "../services/authService";
+import LoadingSpinner from "../components/LoadingSpinner";
+import Navbar from "../components/Navbar";
+
 export default function Dashboard() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await authService.getProfile();
+        setUser(res.data);
+      } catch (error) {
+        console.error("Failed to load user profile", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleLogout = () => {
+    setUser(null);
+  };
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard Overview</h1>
-        <p className="text-sm text-neutral-400">Monitor active mail checks and WhatsApp alerting logs.</p>
-      </div>
+    <div className="min-h-screen bg-neutral-900 text-neutral-100 flex flex-col">
+      <Navbar user={user} onLogout={handleLogout} />
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <div className="p-6 rounded-xl border border-neutral-800 bg-neutral-950/40">
-          <h3 className="text-sm font-medium text-neutral-400">Alert Rules Active</h3>
-          <p className="text-3xl font-bold mt-2 text-emerald-400">0</p>
+      <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-12 space-y-8">
+        <div className="p-8 rounded-2xl border border-neutral-800 bg-neutral-950/40 backdrop-blur-md shadow-lg flex flex-col sm:flex-row items-center gap-6">
+          {user?.picture ? (
+            <img src={user.picture} alt={user.name} className="w-20 h-20 rounded-full border-2 border-emerald-500 shadow-md" />
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center text-emerald-500 text-2xl font-bold">
+              {user?.name?.charAt(0) || "U"}
+            </div>
+          )}
+          
+          <div className="text-center sm:text-left space-y-1 flex-1">
+            <h1 className="text-2xl font-bold">{user?.name}</h1>
+            <p className="text-sm font-mono text-neutral-400">{user?.email}</p>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 mt-2">
+              Google Account Connected
+            </div>
+          </div>
         </div>
-        <div className="p-6 rounded-xl border border-neutral-800 bg-neutral-950/40">
-          <h3 className="text-sm font-medium text-neutral-400">Gmail Watch Status</h3>
-          <p className="text-3xl font-bold mt-2 text-rose-500">Disconnected</p>
-        </div>
-        <div className="p-6 rounded-xl border border-neutral-800 bg-neutral-950/40">
-          <h3 className="text-sm font-medium text-neutral-400">Notifications Sent</h3>
-          <p className="text-3xl font-bold mt-2">0</p>
-        </div>
-      </div>
 
-      <div className="rounded-xl border border-neutral-800 bg-neutral-950/40 p-6">
-        <h2 className="text-lg font-semibold mb-4">Active Alert Rules</h2>
-        <div className="border border-dashed border-neutral-800 rounded-lg p-8 text-center text-neutral-500 text-sm">
-          No alert rules defined. Run authentication setup to select your senders.
+        <div className="p-8 rounded-2xl border border-neutral-800 bg-neutral-950/40 backdrop-blur-md space-y-4">
+          <h2 className="text-xl font-bold">Integrations Status</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="p-4 rounded-xl border border-neutral-900 bg-neutral-900/40">
+              <p className="text-xs text-neutral-400 font-medium uppercase tracking-wider">Gmail Alert Scanner</p>
+              <p className="text-lg font-bold text-yellow-400/90 mt-1">Pending Setup (Sprint 3)</p>
+            </div>
+            <div className="p-4 rounded-xl border border-neutral-900 bg-neutral-900/40">
+              <p className="text-xs text-neutral-400 font-medium uppercase tracking-wider">WhatsApp Alerts</p>
+              <p className="text-lg font-bold text-yellow-400/90 mt-1">Pending Setup (Sprint 3)</p>
+            </div>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

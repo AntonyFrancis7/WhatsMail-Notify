@@ -22,11 +22,75 @@ A production-ready full-stack application that monitors a user's Gmail inbox usi
 ### Backend
 - **Node.js**
 - **Express.js**
-- **Mongoose / MongoDB** (data architecture logs & user preferences)
+- **PostgreSQL / Prisma ORM** (data architecture logs & user preferences)
 
 ### OAuth & Communication Integrations
 - **Gmail API** (`googleapis` developer integrations)
 - **WhatsApp Cloud API** (`axios` integration framework)
+
+---
+
+## Google OAuth 2.0 & PostgreSQL Setup
+
+### 1. PostgreSQL & Prisma Setup
+Ensure you have a running PostgreSQL database instance (local server or hosting provider).
+Update `DATABASE_URL` in `backend/.env` with your connection string.
+
+After installing dependencies, run the migrations to create the database tables:
+```bash
+npx prisma migrate dev --name init
+```
+Generate Prisma Client binaries:
+```bash
+npx prisma generate
+```
+
+### 2. Google Cloud Setup
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a new project.
+3. Search for **APIs & Services** > **OAuth consent screen**.
+4. Set User Type to **External**, fill in required App Name & support email fields.
+5. In **Scopes**, add `openid`, `../auth/userinfo.email`, `../auth/userinfo.profile`, and `https://www.googleapis.com/auth/gmail.readonly`.
+6. Go to **Credentials**, click **Create Credentials** > **OAuth client ID**.
+7. Set Application Type to **Web application**.
+8. Under **Authorized JavaScript origins**, add:
+   - `http://localhost:3000` (Frontend)
+   - `http://localhost:5000` (Backend)
+9. Under **Authorized redirect URIs**, add:
+   - `http://localhost:5000/api/auth/google/callback` (Backend Callback Link)
+10. Copy your **Client ID** and **Client Secret** and add them to `backend/.env`.
+
+---
+
+## Authentication Flow
+
+Below is the authentication sequence diagram illustrating the OAuth 2.0 flow:
+
+```mermaid
+sequenceDiagram
+    actor User as User Browser
+    participant FE as React Frontend (:3000)
+    participant BE as Express Backend (:5000)
+    participant Google as Google Auth Server
+
+    User->>FE: Click "Sign in with Google"
+    FE->>User: Redirect to BE GET /api/auth/google
+    User->>BE: Request login redirect URL
+    BE->>User: Redirect to Google Consent Portal (with client ID & scopes)
+    User->>Google: Grant permissions & authenticate
+    Google->>BE: Redirect to BE GET /api/auth/google/callback?code=CODE
+    BE->>Google: Exchange authorization CODE for Access & Refresh Tokens
+    Google-->>BE: Returns tokens
+    BE->>BE: Requests user account details
+    Google-->>BE: Returns profile payload (ID, email, name, picture)
+    BE->>BE: Upsert User Profile inside PostgreSQL (via Prisma)
+    BE->>User: Issue JWT in HTTP-Only Lax Cookie (token) & redirect to FE /dashboard
+    User->>FE: Renders /dashboard
+    FE->>BE: GET /api/auth/profile (with credentials cookies)
+    BE->>BE: Verify JWT Cookie
+    BE-->>FE: Return Profile JSON Data
+    FE-->>User: Display Authenticated Page UI
+```
 
 ---
 
@@ -44,7 +108,8 @@ WhatsMail-Notify/
 │   ├── config/             # DB and system connection helpers
 │   ├── controllers/        # Business controllers logic
 │   ├── middleware/         # Auth, 404, handles, global errors
-│   ├── models/             # Database Schemas (User, Rule logs)
+│   ├── prisma/             # Prisma database schema definition
+│   │   └── schema.prisma
 │   ├── routes/             # Authentication & Webhook endpoints
 │   ├── services/           # External API interfaces (Gmail, WhatsApp Helper)
 │   └── utils/              # Formatter and helpers stub modules
@@ -80,7 +145,7 @@ PORT=5000
 Create `backend/.env` containing:
 ```ini
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/whatsmail_notify
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/whatsmail_notify?schema=public
 GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 GOOGLE_REDIRECT_URI=http://localhost:5000/api/auth/google/callback
@@ -102,7 +167,7 @@ VITE_API_URL=http://localhost:5000
 
 ### Prerequisites
 - Node.js (version `>= 18`)
-- MongoDB (running local daemon or Atlas instance)
+- PostgreSQL (database runner)
 
 ### 1. Installation
 In the project root, download all dependencies for the backend and frontend separately:
@@ -110,6 +175,10 @@ In the project root, download all dependencies for the backend and frontend sepa
 # Install backend packages
 cd backend
 npm install
+
+# Run database migrations and client generation
+npx prisma migrate dev --name init
+npx prisma generate
 
 # Install frontend packages
 cd ../frontend
