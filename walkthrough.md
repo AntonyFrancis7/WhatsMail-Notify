@@ -119,8 +119,25 @@ An automated test runner is exposed at the `/api/processor/test` route. When tri
 
 ---
 
-## 6. Sprint 3 Part 3 Preparation
-The backend APIs and database relations are complete, fully validating the logic layer. The codebase is prepared to begin Sprint 3 Part 3 to build the frontend notification settings administration panel.
+## 6. Frontend Notification Settings Dashboard (Sprint 3 Part 3)
+
+The complete user-facing Notification Settings Dashboard is implemented and integrated.
+
+### UI Component Framework (`frontend/src/components/settings/`)
+* [SettingsCard.jsx](file:///d:/programs/WhatsMail-Notify/frontend/src/components/settings/SettingsCard.jsx): A modular container component styling individual card dividers in line with the MailPulse dark theme.
+* [ToggleSwitch.jsx](file:///d:/programs/WhatsMail-Notify/frontend/src/components/settings/ToggleSwitch.jsx): Animated toggle switches mapping the boolean status (`enabled`) of notifications.
+* [PriorityDropdown.jsx](file:///d:/programs/WhatsMail-Notify/frontend/src/components/settings/PriorityDropdown.jsx): Custom dropdown elements to filter minimum required alerts priority levels (`LOW`, `MEDIUM`, `HIGH`).
+* [CategoryRow.jsx](file:///d:/programs/WhatsMail-Notify/frontend/src/components/settings/CategoryRow.jsx): Individual preference row items displaying category names, custom SVG icons, toggle switches, and priority limits.
+* [CategoryCard.jsx](file:///d:/programs/WhatsMail-Notify/frontend/src/components/settings/CategoryCard.jsx): Lists the 16 supported categories and houses the `Save Preferences` button.
+* [TrustedSenderManager.jsx](file:///d:/programs/WhatsMail-Notify/frontend/src/components/settings/TrustedSenderManager.jsx) & [BlockedSenderManager.jsx](file:///d:/programs/WhatsMail-Notify/frontend/src/components/settings/BlockedSenderManager.jsx): Whitelist and blacklist managers validating formats (emails/domains) and handling API requests.
+* [KeywordManager.jsx](file:///d:/programs/WhatsMail-Notify/frontend/src/components/settings/KeywordManager.jsx): Allows user inputs for custom search keywords.
+* [SaveBar.jsx](file:///d:/programs/WhatsMail-Notify/frontend/src/components/settings/SaveBar.jsx): A floating bar that slides up when category settings are dirty, prompting users to save or discard.
+* [LoadingOverlay.jsx](file:///d:/programs/WhatsMail-Notify/frontend/src/components/settings/LoadingOverlay.jsx): Renders neat skeletons during API queries.
+* [EmptyState.jsx](file:///d:/programs/WhatsMail-Notify/frontend/src/components/settings/EmptyState.jsx): Clean card fallback when list configurations are empty.
+
+### Settings Page & Core Service
+* [Settings.jsx](file:///d:/programs/WhatsMail-Notify/frontend/src/pages/Settings.jsx): The main coordinator page managing layout states, validations, loading indicators, and local success/error toast feeds.
+* [preferenceService.js](file:///d:/programs/WhatsMail-Notify/frontend/src/services/preferenceService.js): Centralizes all API transactions (GET settings, PUT bulk categories, GET defaults template, POST/DELETE lists elements).
 
 ---
 

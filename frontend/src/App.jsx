@@ -3,6 +3,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Inbox from "./pages/Inbox";
 import EmailDetail from "./pages/EmailDetail";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -32,6 +33,14 @@ function App() {
           element={
             <ProtectedRoute>
               <EmailDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
             </ProtectedRoute>
           }
         />

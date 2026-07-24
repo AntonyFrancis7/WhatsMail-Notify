@@ -31,6 +31,9 @@ export default function Navbar({ user, onLogout }) {
               <Link to="/inbox" className="text-xs sm:text-sm font-semibold text-neutral-400 hover:text-white transition">
                 Inbox
               </Link>
+              <Link to="/settings" className="text-xs sm:text-sm font-semibold text-neutral-400 hover:text-white transition">
+                Settings
+              </Link>
             </div>
           )}
         </div>
